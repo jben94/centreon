@@ -21,7 +21,6 @@ require_once _CENTREON_PATH_ . '/www/api/exceptions.php';
 require_once _CENTREON_PATH_ . "/www/class/centreonLog.class.php";
 
 
-
 /**
  * Utils class for call HTTP JSON REST
  *
@@ -45,7 +44,7 @@ class CentreonRestHttp
      * @var logFileThe The log file for call errors
      */
     private $logObj = null;
-    
+
     /**
      * Constructor
      *
@@ -70,7 +69,7 @@ class CentreonRestHttp
 
         $this->logObj->insertLog(4, $logOutput);
     }
-    
+
     /**
      * Call the http rest endpoint
      *
@@ -97,6 +96,9 @@ class CentreonRestHttp
             )
         );
 
+
+        //   var_dump($httpOpts);
+
         /* Add body json data */
         if (false === is_null($data)) {
             $httpOpts['http']['content'] = json_encode($data);
@@ -116,7 +118,7 @@ class CentreonRestHttp
             /* Get headers */
             $headers = $this->parseHttpMeta($http_response_header);
         }
-        
+
         /* Manage HTTP status code */
         $exceptionClass = null;
         $logMessage = 'Unknown HTTP error';
@@ -153,11 +155,11 @@ class CentreonRestHttp
             $this->insertLog($message, $url, $exceptionClass);
             throw new $exceptionClass($message);
         }
-        
+
         /* Return the content */
         return $decodedContent;
     }
-    
+
     /**
      * Parse stream meta to convert to http headers
      *
@@ -175,7 +177,7 @@ class CentreonRestHttp
             if (preg_match('!^HTTP/1.1 (\d+) (.+)!', $meta, $matches)) {
                 $headers['code'] = $matches[1];
                 $headers['status'] = $matches[2];
-            /* Parse content type return */
+                /* Parse content type return */
             } elseif (preg_match('/Content-Type: (.*)/', $meta, $matches)) {
                 $infos = explode(';', $matches[1]);
                 $headers['content-type'] = $infos[0];
@@ -211,17 +213,14 @@ class CentreonRestHttp
             $dataProxy[$row['key']] = $row['value'];
         }
 
-        if($dataProxy['proxy_url']){
-            if($dataProxy['proxy_protocol']){
-                $this->proxy .= $dataProxy['proxy_protocol'].'://';
+        if (isset($dataProxy['proxy_url']) && $dataProxy['proxy_url'] != '') {
+            if ($dataProxy['proxy_protocol']) {
+                $this->proxy .= $dataProxy['proxy_protocol'] . '://';
             }
             $this->proxy .= $dataProxy['proxy_url'];
-            if($dataProxy['proxy_port']){
-                $this->proxy .= ':'.$dataProxy['proxy_port'];
+            if ($dataProxy['proxy_port']) {
+                $this->proxy .= ':' . $dataProxy['proxy_port'];
             }
         }
-
     }
-
-
 }
