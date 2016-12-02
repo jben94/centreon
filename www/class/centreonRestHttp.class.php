@@ -200,10 +200,15 @@ class CentreonRestHttp
     private function getProxy()
     {
         $db = new CentreonDB();
-        $query = "SELECT proxy_protocol,proxy_url,proxy_port
-                  FROM options";
+        $query = "SELECT `key`, `value` FROM `options` 
+                  WHERE (`key` = 'proxy_protocol'
+                  OR `key` = 'proxy_url'
+                  OR `key` = 'proxy_port')";
         $res = $db->query($query);
-        $dataProxy = $res->fetch();
+        while ($row = $res->fetchRow()) {
+            $dataProxy[$row['key']] = $row['value'];
+        }
+
 
         if($dataProxy['proxy_url']){
 
