@@ -17,6 +17,9 @@
 
 require_once _CENTREON_PATH_ . '/www/api/exceptions.php';
 require_once _CENTREON_PATH_ . "/www/class/centreonLog.class.php";
+require_once _CENTREON_PATH_ . "/www/class/CentreonDB.class.php";
+
+
 
 /**
  * Utils class for call HTTP JSON REST
@@ -33,6 +36,11 @@ class CentreonRestHttp
     private $contentType = 'application/json';
 
     /**
+     * @var using a proxy
+     */
+    private $proxy = null;
+
+    /**
      * @var logFileThe The log file for call errors
      */
     private $logObj = null;
@@ -44,6 +52,7 @@ class CentreonRestHttp
      */
     public function __construct($contentType = 'application/json', $logFile = null)
     {
+        $this->getProxy();
         $this->contentType = $contentType;
         if (!is_null($logFile)) {
             $this->logObj = new CentreonLog(array(4 => $logFile));
@@ -78,6 +87,8 @@ class CentreonRestHttp
         /* Create stream context */
         $httpOpts = array(
             'http' => array(
+                'proxy' => $this->proxy,
+                'request_fulluri' => true,
                 'ignore_errors' => true,
                 'protocol_version' => '1.1',
                 'method' => $method,
@@ -180,4 +191,33 @@ class CentreonRestHttp
 
         return $headers;
     }
+
+
+    /**
+     * get proxy data
+     *
+     */
+    private function getProxy()
+    {
+        $db = new CentreonDB();
+        $query = "SELECT proxy_protocol,proxy_url,proxy_port
+                  FROM options";
+        $res = $db->query($query);
+        $dataProxy = $res->fetch();
+
+        if($dataProxy['proxy_url']){
+
+            if($dataProxy['proxy_protocol']){
+                $this->proxy .= $dataProxy['proxy_protocol'].'://';
+            }
+
+            $this->proxy .= $dataProxy['proxy_url'];
+
+            if($dataProxy['proxy_port']){
+                $this->proxy .= ':'.$dataProxy['proxy_port'];
+            }
+        }
+    }
+
+
 }
