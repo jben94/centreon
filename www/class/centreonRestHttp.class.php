@@ -86,16 +86,17 @@ class CentreonRestHttp
         $headers[] = 'Content-type: ' . $this->contentType;
         $headers[] = 'Connection: close';
         /* Create stream context */
+
         $httpOpts = array(
             'http' => array(
                 'proxy' => $this->proxy,
-                'request_fulluri' => true,
                 'ignore_errors' => true,
                 'protocol_version' => '1.1',
                 'method' => $method,
                 'header' => join("\r\n", $headers)
             )
         );
+
         /* Add body json data */
         if (false === is_null($data)) {
             $httpOpts['http']['content'] = json_encode($data);
@@ -210,15 +211,11 @@ class CentreonRestHttp
             $dataProxy[$row['key']] = $row['value'];
         }
 
-
         if($dataProxy['proxy_url']){
-
             if($dataProxy['proxy_protocol']){
                 $this->proxy .= $dataProxy['proxy_protocol'].'://';
             }
-
             $this->proxy .= $dataProxy['proxy_url'];
-
             if($dataProxy['proxy_port']){
                 $this->proxy .= ':'.$dataProxy['proxy_port'];
             }
