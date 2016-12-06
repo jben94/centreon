@@ -112,6 +112,7 @@ class CentreonGraph
     protected $vname;
     protected $metrics;
     protected $longer;
+    protected $CacheOVDColor;
     public $onecurve;
     public $checkcurve;
 
@@ -204,28 +205,18 @@ class CentreonGraph
         $DBRESULT->free();
         unset($opt);
 
+        $this->CacheOVDColor = array();
         if (isset($index)) {
-            $DBRESULT = $this->DB->query("SELECT `metric_id`
-                                          FROM `ods_view_details`
-                                          WHERE `index_id` = '" . $this->index . "'
-                                          AND `contact_id` = '" . $this->user_id . "'");
-            $metrics_cache = array();
-            if ($DBRESULT->numRows()) {
-                while ($tmp_metrics = $DBRESULT->fetchRow()) {
-                    $metrics_cache[$tmp_metrics['metric_id']] = 1;
-                }
-            }
-            $DBRESULT->free();
+            $this->createCacheOVDColor();
             $DBRESULT = $this->DBC->query("SELECT metric_id
                                            FROM metrics
                                            WHERE index_id = '" . $this->index . "'
                                            AND `hidden` = '0'
                                            ORDER BY `metric_name`");
-            $count = 0;
+            $count = $DBRESULT->numRows();
             $odsm = array();
             while ($milist = $DBRESULT->fetchRow()) {
                 $odsm[$milist["metric_id"]] = 1;
-                $count++;
             }
             // only one metric => warning/critical threshold curves can be displayed
             if ($count === 1) {
@@ -245,14 +236,17 @@ class CentreonGraph
             $DBRESULT->free();
 
             foreach ($odsm as $mid => $val) {
-                if (!isset($metrics_cache[$mid])) {
+                if (!isset($this->CacheOVDColor[$mid])) {
+                    $l_rndcolor = $this->getRandomWebColor();
                     $DBRESULT = $this->DB->query(
                         "INSERT INTO `ods_view_details`
-                            (`metric_id`, `contact_id`, `all_user`, `index_id`)
-                            VALUES ('" . $mid . "', '" . $this->user_id . "', '0', '" . $this->index . "');"
+                            (`metric_id`, `contact_id`, `all_user`, `index_id`, `rnd_color`)
+                            VALUES ('" . $mid . "', '" . $this->user_id . "', '0', '" . $this->index . "', '".$l_rndcolor."');"
                     );
+                    $this->CacheOVDColor[$mid] = $l_rndcolor;
                 }
             }
+            unset($odsm);
         }
     }
 
@@ -501,6 +495,7 @@ class CentreonGraph
         $DBRESULT->free();
         $this->listMetricsId = array();
         $components_ds_cache = null;
+        $ds_cache = NULL;
 
         foreach ($mmetrics as $key => $metric) {
             /*
@@ -576,19 +571,24 @@ class CentreonGraph
                         /** *******************************************
                         * Get default info in default template
                         */
-                        $DBRESULT3 = $this->DB->query(
-                            "SELECT ds_min, ds_max, ds_minmax_int, ds_last, ds_average, ds_total, ds_tickness,
-                                ds_color_line_mode, ds_color_line
-                                FROM giv_components_template
-                                WHERE default_tpl1 = '1' LIMIT 1"
-                        );
-                        if ($DBRESULT3->numRows()) {
-                            foreach ($DBRESULT3->fetchRow() as $key => $ds_val) {
-                                $ds[$key] = $ds_val;
+                        if (is_null($ds_cache)){
+                            $DBRESULT3 = $this->DB->query(
+                                "SELECT ds_min, ds_max, ds_minmax_int, ds_last, ds_average, ds_total, ds_tickness,
+                                    ds_color_line_mode, ds_color_line
+                                    FROM giv_components_template
+                                    WHERE default_tpl1 = '1' LIMIT 1"
+                            );
+                            if ($DBRESULT3->numRows()) {
+                                foreach ($DBRESULT3->fetchRow() as $key => $ds_val) {
+                                    $ds[$key] = $ds_val;
+                                }
                             }
+                            $DBRESULT3->free();
+                            $ds_data = $ds;
+                            $ds_cache = $ds;
+                        } else {
+                            $ds_data = $ds_cache;
                         }
-                        $DBRESULT3->free();
-                        $ds_data = $ds;
                     }
 
                     if ($ds_data["ds_color_line_mode"] == '1') {
@@ -1455,20 +1455,13 @@ class CentreonGraph
      */
     public function getOVDColor($l_mid)
     {
-        $DBRESULT = $this->DB->query(
-            "SELECT `rnd_color`
-                FROM `ods_view_details`
-                WHERE `index_id` = '" . $this->index . "'
-                    AND `metric_id` = '" . $l_mid . "'
-                    AND `contact_id` = '" . $this->user_id . "'"
-        );
-        if ($DBRESULT->numRows()) {
-            $l_ovd = $DBRESULT->fetchRow();
-            $DBRESULT->free();
-            if (isset($l_ovd["rnd_color"]) &&
-                !empty($l_ovd["rnd_color"]) &&
-                preg_match("/^\#[a-f0-9]{6,6}/i", $l_ovd["rnd_color"])) {
-                return $l_ovd["rnd_color"];
+        $this->createCacheOVDColor();
+        if (isset($this->CacheOVDColor[$l_mid])){
+            $l_ovd = $this->CacheOVDColor[$l_mid];
+            if (isset($l_ovd) &&
+                !empty($l_ovd) &&
+                preg_match("/^\#[a-f0-9]{6,6}/i", $l_ovd)) {
+                return $l_ovd;
             }
             $l_rndcolor = $this->getRandomWebColor();
             // Update ods_view_details
@@ -1478,10 +1471,51 @@ class CentreonGraph
                     AND `metric_id` = '" . $l_mid . "'
                     AND `contact_id` = '" . $this->user_id . "';"
             );
+            $this->CacheOVDColor[$l_mid] = $l_rndcolor;
         } else {
             $l_rndcolor = $this->getRandomWebColor();
         }
         return $l_rndcolor;
+    }
+
+    private function createCacheOVDColor()
+    {
+        if (isset($_SESSION['CacheOVDColor'])
+                && $_SESSION['CacheOVDColor']!=''){
+            $this->CacheOVDColor = unserialize($_SESSION['CacheOVDColor']);
+        }
+
+        if (isset($this->CacheOVDColor)
+                && $this->CacheOVDColor['user_id'] == $this->user_id
+                && $this->CacheOVDColor['index_id'] == $this->index){
+            return;
+        }
+
+        $this->resetCacheOVDColor();
+        $DBRESULT = $this->DB->query(
+            "SELECT `rnd_color`,`metric_id` "
+            . "FROM `ods_view_details` "
+            . "WHERE `index_id` = '".$this->index."' "
+                . "AND `contact_id` = '".$this->user_id."'");
+        if ($DBRESULT->numRows()) {
+            while ($row = $DBRESULT->fetchRow()){
+                $this->CacheOVDColor[$row['metric_id']] = $row['rnd_color'];
+            }
+            $this->CacheOVDColor['user_id'] = $this->user_id;
+            $this->CacheOVDColor['index_id'] = $this->index;
+            $_SESSION['CacheOVDColor'] = serialize($this->CacheOVDColor);
+            if (isset($row))
+                unset($row);
+        }
+        $DBRESULT->free();
+    }
+
+    private function resetCacheOVDColor()
+    {
+        $this->CacheOVDColor = array();
+        if (isset($_SESSION['CacheOVDColor'])) {
+            unset($_SESSION['CacheOVDColor']);
+        }
     }
 
     /**
