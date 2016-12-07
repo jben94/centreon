@@ -56,7 +56,7 @@ if (!isset($action)) {
     exit;
 }
 
-$query = "select * from custom_views where public = 1";
+$query = "select * from custom_views where public = 1 order by name";
 $DBRES = $db->query($query);
 $arrayView = array();
 $arrayView[-1] = "";
