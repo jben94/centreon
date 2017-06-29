@@ -1365,27 +1365,39 @@ class CentreonHost
                         $queryFields .= '*';
                     }
                 }
-                $query = 'SELECT ' . $queryFields . ' ' .
-                    'FROM host h ' .
-                    'WHERE host_id = :hostId';
-                $stmt = $this->db->prepare($query);
-                $stmt->bindParam(':hostId', $hostId, PDO::PARAM_INT);
-                $dbResult = $stmt->execute();
-                if (!$dbResult) {
-                    throw new \Exception("An error occured");
-                }
+                
+                if (!count($this->InheritedValuesCache)) {
+                    if (count($fields) && !in_array('host_id', $fields))
+                        $queryFields = "`host_id`, " . $queryFields;
 
-                while ($row = $stmt->fetch()) {
-                    if (!count($alreadyProcessed)) {
-                        $fields = array_keys($row);
+                    $query = "SELECT " . $queryFields . " "
+                        . "FROM host h";
+
+                    $stmt = $this->db->prepare($query);
+                    $dbResult = $stmt->execute();
+                    if (!$dbResult) {
+                        throw new \Exception("An error occured");
                     }
-                    foreach ($row as $field => $value) {
-                        if (!isset($values[$field]) && !is_null($value) && $value != '') {
-                            unset($fields[$field]);
-                            $values[$field] = $value;
+
+                    while ($row = $stmt->fetch()) {
+                        $host_id = $row['host_id'];
+                        if (count($fields) && !in_array('host_id', $fields))
+                            unset($row['host_id']);
+                        
+                        if (!count($alreadyProcessed)) {
+                            $fields = array_keys($row);
                         }
+                        $this->InheritedValuesCache[$host_id] = $row;
                     }
                 }
+                
+                foreach ($this->InheritedValuesCache[$hostId] as $field => $value) {
+                    if (!isset($values[$field]) && !is_null($value) && $value != '') {
+                        unset($fields[$field]);
+                        $values[$field] = $value;
+                    }
+                }
+ 
                 $alreadyProcessed[] = $hostId;
                 $hostTemplateIds = $this->getHostTemplateIds($hostId);
                 foreach ($hostTemplateIds as $hostTemplateId) {
