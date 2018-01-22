@@ -232,18 +232,20 @@ class CentreonPerformanceService extends CentreonConfigurationObjects
             $metaServices = $aclObj->getMetaServices();
             $virtualServices = array();
             foreach ($metaServices as $metaServiceId => $metaServiceName) {
-                $virtualServices[] = '"meta_' . $metaServiceId . '"';
+                $virtualServices[] = 'meta_' . $metaServiceId;
             }
+            $metaServiceCondition = 'AND s.description IN (';
             if (count($virtualServices)) {
-                $metaServiceCondition = 'AND s.description IN (';
                 $explodedValues = '';
                 foreach ($virtualServices as $k => $v) {
                     $explodedValues .= ':meta' . $v . ',';
                     $metaValues['metaService']['meta' . $v] = (string)$v;
                 }
-                $explodedValues = rtrim($explodedValues, ',');
-                $metaServiceCondition .= $explodedValues . ') ';
+            } else {
+                $explodedValues = '1';
             }
+            $explodedValues = rtrim($explodedValues, ',');
+            $metaServiceCondition .= $explodedValues . ') ';
         }
 
         $metaServiceCondition .= 'AND s.description LIKE "meta_%" ';
