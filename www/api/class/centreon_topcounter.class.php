@@ -163,18 +163,18 @@ class CentreonTopCounter extends CentreonWebService
      */
     public function putAutoLoginToken()
     {
+        global $centreon;
+
         $userId = $this->arguments['userId'];
         $autoLoginKey = $this->arguments['token'];
 
-        global $centreon;
-
-        $query = "UPDATE contact SET contact_autologin_key = ? " .
-            "WHERE contact_id = ?";
-
+        $query = "UPDATE contact SET contact_autologin_key = :autoKey WHERE contact_id = :userId";
         $stmt = $this->pearDB->prepare($query);
-        $res = $this->pearDB->execute($stmt, array($autoLoginKey, $userId));
+        $stmt->bindParam(':autoKey', $autoLoginKey, PDO::PARAM_STR);
+        $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
+        $res = $stmt->execute();
 
-        if (PEAR::isError($res)) {
+        if (!$res) {
             throw new \Exception('Error while update autologinKey ' . $autoLoginKey);
         }
 
@@ -695,7 +695,7 @@ class CentreonTopCounter extends CentreonWebService
 
         /* Get status of pollers */
         $query = 'SELECT instance_id, last_alive, running FROM instances
-            WHERE deleted = 0 AND instance_id IN (' . join(', ', array_keys($listPoller)) . ')';
+            WHERE deleted = 0 AND instance_id IN (' . implode(', ', array_keys($listPoller)) . ')';
 
         try {
             $res = $this->pearDBMonitoring->query($query);
@@ -725,7 +725,7 @@ class CentreonTopCounter extends CentreonWebService
                 AND n.stat_key = "Average"
                 AND n.instance_id = i.instance_id
                 AND i.deleted = 0
-                AND i.instance_id IN (' . join(', ', array_keys($listPoller)) . ')';
+                AND i.instance_id IN (' . implode(', ', array_keys($listPoller)) . ')';
 
         try {
             $res = $this->pearDBMonitoring->query($query);

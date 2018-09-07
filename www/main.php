@@ -231,7 +231,9 @@ if (!$centreon->user->showDiv("menu_2")) {
         new Effect.toggle('menu_2', 'appear', {duration: 0});
     </script> <?php
 }
-
+?>
+    <section class="main">
+<?php
 /*
  * Display PathWay
  */
@@ -266,8 +268,6 @@ if (!isset($centreon->historyPage)) {
  */
 $inputArguments = array(
     'num' => FILTER_SANITIZE_NUMBER_INT,
-    'search' => FILTER_SANITIZE_STRING,
-    'search_service' => FILTER_SANITIZE_STRING,
     'limit' => FILTER_SANITIZE_NUMBER_INT
 );
 $inputGet = filter_input_array(
@@ -300,24 +300,6 @@ if (isset($url) && $url) {
                     $centreon->historyPage[$url] = 0;
                 }
                 break;
-            case 'search':
-                if (!is_null($inputGet[$argumentName])) {
-                    $centreon->historySearch[$url] = $inputGet[$argumentName];
-                } elseif (!is_null($inputPost[$argumentName])) {
-                    $centreon->historySearch[$url] = $inputPost[$argumentName];
-                } else {
-                    $centreon->historySearch[$url] = '';
-                }
-                break;
-            case 'search_service':
-                if (!is_null($inputGet[$argumentName])) {
-                    $centreon->historySearchService[$url] = $inputGet[$argumentName];
-                } elseif (!is_null($inputPost[$argumentName])) {
-                    $centreon->historySearchService[$url] = $inputPost[$argumentName];
-                } else {
-                    $centreon->historySearchService[$url] = '';
-                }
-                break;
             default:
                 continue;
                 break;
@@ -332,7 +314,9 @@ if (isset($url) && $url) {
 if (!$min) {
     print "\t\t\t</td>\t\t</tr>\t</table>\n</div>";
 }
-
+?>
+    </section>
+<?php
 /*
  * Include Footer 
  */

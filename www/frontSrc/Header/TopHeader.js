@@ -17,8 +17,7 @@ const styles = theme => ({
     flexGrow: 1,
     zIndex: 1,
     fontFamily: theme.font.openSans,
-    overflow: 'hidden',
-    marginBottom: 40
+    overflow: 'hidden'
   },
   container: {
     display: 'grid',
